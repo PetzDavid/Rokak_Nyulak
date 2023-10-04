@@ -1,179 +1,172 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading;
 
 class Program
 {
-    static Random veletlen = new Random();
-    static int racsMeret = 10;
-    static int maxNyulak = 20;
-    static int maxRokak = 10;
-
-    static int[,] racs = new int[racsMeret, racsMeret];
-    static List<Nyul> nyulak = new List<Nyul>();
-    static List<Roka> rokak = new List<Roka>();
-
     static void Main()
     {
-        KezdoAllapot();
-        KezdoEntitasok();
+        int width = 20;
+        int height = 10;
+        Random random = new Random();
 
-        int kor = 0;
+        Erdo erdo = new Erdo(width, height);
+        erdo.KezdoAllatokGeneralasa(random);
+        erdo.Megjelenit();
 
-        while (nyulak.Count > 0)
+        while (true)
         {
-            kor++;
-            Console.WriteLine($"Kör {kor}");
-            RacsFrissitese();
-            RacsKirajzolasa();
-            EntitasokFrissitese();
-            Console.WriteLine();
-            System.Threading.Thread.Sleep(1000); 
+            Thread.Sleep(1000);
+            Console.Clear();
+            erdo.EgyNapSzimulacioja(random);
+            erdo.Megjelenit();
         }
-
-        Console.WriteLine("Minden nyúl elpusztult. A szimuláció véget ér.");
-    }
-
-    static void KezdoAllapot()
-    {
-        for (int x = 0; x < racsMeret; x++)
-        {
-            for (int y = 0; y < racsMeret; y++)
-            {
-                racs[x, y] = veletlen.Next(3); 
-            }
-        }
-    }
-
-    static void KezdoEntitasok()
-    {
-        for (int i = 0; i < maxNyulak; i++)
-        {
-            int x = veletlen.Next(racsMeret);
-            int y = veletlen.Next(racsMeret);
-            nyulak.Add(new Nyul(x, y));
-        }
-
-        for (int i = 0; i < maxRokak; i++)
-        {
-            int x = veletlen.Next(racsMeret);
-            int y = veletlen.Next(racsMeret);
-            rokak.Add(new Roka(x, y));
-        }
-    }
-
-    static void RacsFrissitese()
-    {
-        
-        for (int x = 0; x < racsMeret; x++)
-        {
-            for (int y = 0; y < racsMeret; y++)
-            {
-                if (racs[x, y] == 0 && !nyulak.Any(n => n.X == x && n.Y == y))
-                {
-                    racs[x, y] = 1; 
-                }
-                else if (racs[x, y] == 1 && !nyulak.Any(n => n.X == x && n.Y == y))
-                {
-                    racs[x, y] = 2; 
-                }
-            }
-        }
-    }
-
-    static void RacsKirajzolasa()
-    {
-        for (int x = 0; x < racsMeret; x++)
-        {
-            for (int y = 0; y < racsMeret; y++)
-            {
-                if (nyulak.Any(n => n.X == x && n.Y == y))
-                {
-                    Console.Write("N ");
-                }
-                else if (rokak.Any(r => r.X == x && r.Y == y))
-                {
-                    Console.Write("R ");
-                }
-                else
-                {
-                    Console.Write(racs[x, y] + " ");
-                }
-            }
-            Console.WriteLine();
-        }
-    }
-
-    static void EntitasokFrissitese()
-    {
-        List<Nyul> ujNyulak = new List<Nyul>();
-        List<Roka> ujRokak = new List<Roka>();
-
-        foreach (var nyul in nyulak)
-        {
-            nyul.Mozgas();
-            nyul.Eves(racs);
-            if (nyul.SzaporodasKepezes())
-            {
-                ujNyulak.Add(new Nyul(nyul.X, nyul.Y));
-            }
-            nyul.EhessegCsokkentes();
-        }
-
-        foreach (var roka in rokak)
-        {
-            roka.Mozgas();
-            roka.Vadaszat(nyulak);
-            if (roka.SzaporodasKepezes())
-            {
-                ujRokak.Add(new Roka(roka.X, roka.Y));
-            }
-            roka.EhessegCsokkentes();
-        }
-
-        nyulak.AddRange(ujNyulak);
-        rokak.AddRange(ujRokak);
-
-        nyulak.RemoveAll(n => n.Ehesseg <= 0);
-        rokak.RemoveAll(r => r.Ehesseg <= 0);
     }
 }
 
-class Nyul
+class Allat
 {
-    public int X { get; private set; }
-    public int Y { get; private set; }
-    public int Ehesseg { get; private set; }
+    public int x, y;
+    public char jel;
 
-    public Nyul(int x, int y)
+    public Allat(int x, int y, char jel)
     {
-        X = x;
-        Y = y;
-        Ehesseg = 5; 
+        this.x = x;
+        this.y = y;
+        this.jel = jel;
     }
 
+    public int X { get { return x; } }
+    public int Y { get { return y; } }
 
-    public void EhessegCsokkentes()
+    public void Mozgas(int newX, int newY)
     {
-        Ehesseg--;
+        x = newX;
+        y = newY;
     }
 }
 
-class Roka
+class Nyul : Allat
 {
-    public int X { get; private set; }
-    public int Y { get; private set; }
-    public int Ehesseg { get; private set; }
+    public Nyul(int x, int y) : base(x, y, 'N') { }
+}
 
-    public Roka(int x, int y)
+class Roka : Allat
+{
+    public Roka(int x, int y) : base(x, y, 'R') { }
+}
+
+class Erdo
+{
+    private int szelesseg, magassag;
+    private char[,] matrix;
+    private List<Nyul> nyulak;
+    private List<Roka> rokak;
+
+    public Erdo(int szelesseg, int magassag)
     {
-        X = x;
-        Y = y;
-        Ehesseg = 10; 
+        this.szelesseg = szelesseg;
+        this.magassag = magassag;
+        matrix = new char[szelesseg, magassag];
+        nyulak = new List<Nyul>();
+        rokak = new List<Roka>();
     }
 
-    public void EhessegCsokkentes()
+    public void KezdoAllatokGeneralasa(Random random)
     {
-        Ehesseg--;
+        for (int i = 0; i < 5; i++)
+        {
+            int x = random.Next(szelesseg);
+            int y = random.Next(magassag);
+            Nyul nyul = new Nyul(x, y);
+            nyulak.Add(nyul);
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            int x = random.Next(szelesseg);
+            int y = random.Next(magassag);
+            Roka roka = new Roka(x, y);
+            rokak.Add(roka);
+        }
+    }
+
+    public void EgyNapSzimulacioja(Random random)
+    {
+        foreach (Roka roka in rokak)
+        {
+            int newX = roka.X + random.Next(-1, 2);
+            int newY = roka.Y + random.Next(-1, 2);
+            newX = Math.Max(0, Math.Min(szelesseg - 1, newX));
+            newY = Math.Max(0, Math.Min(magassag - 1, newY));
+            roka.Mozgas(newX, newY);
+
+            foreach (Nyul nyul in nyulak)
+            {
+                if (roka.X == nyul.X && roka.Y == nyul.Y)
+                {
+                    Console.WriteLine("Egy róka megevett egy nyulat!");
+                    nyulak.Remove(nyul);
+                    break;
+                }
+            }
+        }
+
+        foreach (Nyul nyul in nyulak)
+        {
+            int newX = nyul.X + random.Next(-1, 2);
+            int newY = nyul.Y + random.Next(-1, 2);
+            newX = Math.Max(0, Math.Min(szelesseg - 1, newX));
+            newY = Math.Max(0, Math.Min(magassag - 1, newY));
+            nyul.Mozgas(newX, newY);
+        }
+
+        if (random.Next(0, 101) <= 10)
+        {
+            int x = random.Next(szelesseg);
+            int y = random.Next(magassag);
+            Nyul ujNyul = new Nyul(x, y);
+            nyulak.Add(ujNyul);
+            Console.WriteLine("Egy új nyúl született!");
+        }
+    }
+
+    public void Megjelenit()
+    {
+        for (int y = 0; y < magassag; y++)
+        {
+            for (int x = 0; x < szelesseg; x++)
+            {
+                bool allatKiir = false;
+                foreach (Nyul nyul in nyulak)
+                {
+                    if (nyul.X == x && nyul.Y == y)
+                    {
+                        Console.Write(nyul.jel);
+                        allatKiir = true;
+                        break;
+                    }
+                }
+
+                if (!allatKiir)
+                {
+                    foreach (Roka roka in rokak)
+                    {
+                        if (roka.X == x && roka.Y == y)
+                        {
+                            Console.Write(roka.jel);
+                            allatKiir = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!allatKiir)
+                {
+                    Console.Write("-");
+                }
+            }
+            Console.WriteLine();
+        }
     }
 }
