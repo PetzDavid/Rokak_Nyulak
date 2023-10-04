@@ -45,6 +45,22 @@ class Program
         }
     }
 
+    static void KezdoEntitasok()
+    {
+        for (int i = 0; i < maxNyulak; i++)
+        {
+            int x = veletlen.Next(racsMeret);
+            int y = veletlen.Next(racsMeret);
+            nyulak.Add(new Nyul(x, y));
+        }
+
+        for (int i = 0; i < maxRokak; i++)
+        {
+            int x = veletlen.Next(racsMeret);
+            int y = veletlen.Next(racsMeret);
+            rokak.Add(new Roka(x, y));
+        }
+    }
 
     static void RacsFrissitese()
     {
@@ -88,5 +104,76 @@ class Program
         }
     }
 
+    static void EntitasokFrissitese()
+    {
+        List<Nyul> ujNyulak = new List<Nyul>();
+        List<Roka> ujRokak = new List<Roka>();
 
+        foreach (var nyul in nyulak)
+        {
+            nyul.Mozgas();
+            nyul.Eves(racs);
+            if (nyul.SzaporodasKepezes())
+            {
+                ujNyulak.Add(new Nyul(nyul.X, nyul.Y));
+            }
+            nyul.EhessegCsokkentes();
+        }
+
+        foreach (var roka in rokak)
+        {
+            roka.Mozgas();
+            roka.Vadaszat(nyulak);
+            if (roka.SzaporodasKepezes())
+            {
+                ujRokak.Add(new Roka(roka.X, roka.Y));
+            }
+            roka.EhessegCsokkentes();
+        }
+
+        nyulak.AddRange(ujNyulak);
+        rokak.AddRange(ujRokak);
+
+        nyulak.RemoveAll(n => n.Ehesseg <= 0);
+        rokak.RemoveAll(r => r.Ehesseg <= 0);
+    }
+}
+
+class Nyul
+{
+    public int X { get; private set; }
+    public int Y { get; private set; }
+    public int Ehesseg { get; private set; }
+
+    public Nyul(int x, int y)
+    {
+        X = x;
+        Y = y;
+        Ehesseg = 5; 
+    }
+
+
+    public void EhessegCsokkentes()
+    {
+        Ehesseg--;
+    }
+}
+
+class Roka
+{
+    public int X { get; private set; }
+    public int Y { get; private set; }
+    public int Ehesseg { get; private set; }
+
+    public Roka(int x, int y)
+    {
+        X = x;
+        Y = y;
+        Ehesseg = 10; 
+    }
+
+    public void EhessegCsokkentes()
+    {
+        Ehesseg--;
+    }
 }
